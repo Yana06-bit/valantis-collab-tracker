@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Valantis Collab Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box} html{-webkit-text-size-adjust:100%} body{margin:0} img{max-width:100%} [hidden]{display:none!important}
+/* Layout: a training-log ledger — heavy header rule, KPI strip, then wide working tables with a sticky first column. Influencers = money (codes, sales, payout); Shipments = one row per seeding (delivery, content, reminders). Bumper-plate yellow is the only accent. */
+:root{
+  --bg:#f2f2ef; --surface:#ffffff; --ink:#15171a; --muted:#5d6168; --line:#dcdcd6;
+  --accent:#e7b416; --accent-ink:#15171a; --chip:#ecece7; --field:#fafaf7;
+  --ok:#1f7a4d; --ok-bg:#e3f2ea; --warn:#9a5b00; --warn-bg:#fbefd6; --bad:#a3262a; --bad-bg:#f8e2e1;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111214; --surface:#1a1c1f; --ink:#ececea; --muted:#9a9ea5; --line:#2c2f33;
+  --accent:#f0c232; --accent-ink:#111214; --chip:#24272b; --field:#141619;
+  --ok:#6fd3a0; --ok-bg:#16301f; --warn:#f2bd5c; --warn-bg:#352812; --bad:#f08a86; --bad-bg:#3a1a1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111214; --surface:#1a1c1f; --ink:#ececea; --muted:#9a9ea5; --line:#2c2f33;
+  --accent:#f0c232; --accent-ink:#111214; --chip:#24272b; --field:#141619;
+  --ok:#6fd3a0; --ok-bg:#16301f; --warn:#f2bd5c; --warn-bg:#352812; --bad:#f08a86; --bad-bg:#3a1a1a; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+.wrap{max-width:1440px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:18px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;border-bottom:3px solid var(--ink);padding-bottom:14px}
+.brand{display:grid;gap:2px;min-width:0}
+.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font-family:var(--display);font-weight:900;font-stretch:72%;font-size:clamp(34px,6vw,54px);line-height:.92;letter-spacing:-.01em;text-transform:uppercase}
+h1 span{background:var(--accent);color:var(--accent-ink);padding:0 .12em}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.periods{display:flex;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden;flex-wrap:wrap}
+.periods button{border:0;border-left:1.5px solid var(--ink);background:var(--surface);padding:0 11px;height:35px;font-size:13px;font-weight:600;cursor:pointer}
+.periods button:first-child{border-left:0}
+.periods button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.periods button:disabled{opacity:.5;cursor:default}
+.btn{height:38px;border:1.5px solid var(--ink);background:var(--surface);border-radius:4px;padding:0 12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn:disabled{opacity:.45;cursor:default}
+.updated{font:12px var(--mono);color:var(--muted);width:100%;text-align:right}
+
+.banner{border:1.5px solid var(--line);border-left:6px solid var(--muted);background:var(--surface);padding:12px 16px;border-radius:4px;display:grid;gap:4px}
+.banner b{font-weight:600}
+.banner.err{border-left-color:var(--bad)} .banner.warn{border-left-color:var(--warn)} .banner.info{border-left-color:var(--accent)}
+.progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.progress i{display:block;height:100%;width:30%;background:var(--accent);animation:slide 1.1s infinite ease-in-out}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
+@media (prefers-reduced-motion:reduce){.progress i{animation:none;width:100%}}
+
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1.5px solid var(--ink);border-radius:4px;background:var(--surface)}
+.kpi{padding:14px 16px;display:grid;gap:2px;align-content:start;border-left:1.5px solid var(--line);min-width:0}
+.kpi:first-child{border-left:0}
+.kpi .n{font-family:var(--display);font-weight:800;font-stretch:80%;font-size:32px;line-height:1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi .l{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.kpi .s{font-size:12px;color:var(--muted)}
+.kpi.alert .n{color:var(--warn)}
+@media (max-width:980px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.kpi{border-top:1.5px solid var(--line)}.kpi:nth-child(-n+3){border-top:0}.kpi:nth-child(4){border-left:0}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi{border-left:0;border-top:1.5px solid var(--line)}.kpi:nth-child(-n+2){border-top:0}.kpi:nth-child(even){border-left:1.5px solid var(--line)}}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.tabs{display:flex;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden}
+.tabs button{border:0;background:var(--surface);padding:8px 14px;font-weight:600;cursor:pointer;border-left:1.5px solid var(--ink)}
+.tabs button:first-child{border-left:0}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0;flex:1;justify-content:flex-end}
+.search{height:38px;border:1.5px solid var(--line);background:var(--surface);border-radius:4px;padding:0 12px;min-width:0;width:min(260px,100%)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.focus{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--warn-bg);border-radius:4px;padding:6px 10px;font-size:13px}
+.focus button{border:0;background:transparent;text-decoration:underline;cursor:pointer;font-weight:600;padding:0}
+
+details.settings{background:var(--surface);border:1.5px solid var(--line);border-radius:4px}
+details.settings summary{cursor:pointer;padding:10px 14px;font-weight:600}
+.settings-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;padding:4px 14px 14px}
+.field{display:grid;gap:4px;min-width:0}
+.field label{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field textarea{min-height:92px;resize:vertical;border:1.5px solid var(--line);border-radius:4px;padding:8px;background:var(--field);font-size:13px}
+.field .hint{font-size:12px;color:var(--muted)}
+.days{display:flex;gap:8px;align-items:center;font-size:13px}
+
+.tablewrap{overflow-x:auto;border:1.5px solid var(--ink);border-radius:4px;background:var(--surface)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+table.ledger{min-width:1320px}
+table.ships{min-width:1420px}
+th{font:600 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px;border-bottom:1.5px solid var(--ink);white-space:nowrap;background:var(--surface);vertical-align:bottom}
+th.grp{border-bottom:1px solid var(--line);color:var(--ink);padding-bottom:4px}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top;background:var(--surface)}
+tbody tr:last-child td{border-bottom:0}
+.sticky th:first-child,.sticky td:first-child{position:sticky;left:0;z-index:1;border-right:1.5px solid var(--line)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+th.num{text-align:right}
+tfoot td{border-top:1.5px solid var(--ink);border-bottom:0;font-weight:600}
+
+.who{display:grid;gap:3px;min-width:170px;max-width:230px}
+.who b{font-family:var(--display);font-weight:800;font-stretch:85%;font-size:17px;line-height:1.1;text-transform:uppercase;overflow-wrap:anywhere}
+.ordno{font:600 14px var(--mono)}
+.sub{font-size:12px;color:var(--muted)}
+.addr{font-size:12px;color:var(--muted);max-width:230px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;max-width:260px}
+.chip{background:var(--chip);border-radius:3px;padding:1px 6px;font-size:12px;font-weight:500}
+.chip em{font-style:normal;font-family:var(--mono);color:var(--muted);margin-left:4px}
+.pill{display:inline-block;font:600 10.5px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 8px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.wait{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.mute{background:var(--chip);color:var(--muted)}
+.track{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+a.link{color:var(--ink);font-weight:600;text-decoration:none;border-bottom:2px solid var(--accent)}
+.flag{display:inline-block;font-size:11.5px;color:var(--warn);background:var(--warn-bg);border-radius:3px;padding:2px 6px}
+.flag.bad{color:var(--bad);background:var(--bad-bg)}
+.stack{display:grid;gap:6px;justify-items:start}
+.tally{display:flex;gap:4px;flex-wrap:wrap}
+.linkbtn{border:0;background:transparent;padding:0;font-size:12px;font-weight:600;color:var(--ink);border-bottom:2px solid var(--accent);cursor:pointer}
+
+.in{height:32px;border:1.5px solid var(--line);background:var(--field);border-radius:4px;padding:0 8px;font-size:13px;min-width:0}
+.in:hover{border-color:var(--muted)}
+.in:focus{border-color:var(--ink)}
+.in:disabled{opacity:.6}
+.in.code{width:130px;font-family:var(--mono)}
+.in.pct{width:72px;text-align:right;font-family:var(--mono)}
+.in.date{width:140px}
+.in.link{width:170px}
+select.in{height:32px;cursor:pointer}
+.saved{font-size:11px;color:var(--ok)}
+
+.rem{display:grid;gap:5px;justify-items:start;min-width:130px}
+.mini{display:flex;gap:6px;flex-wrap:wrap}
+.mbtn{height:26px;border:1.5px solid var(--ink);background:var(--surface);border-radius:3px;padding:0 8px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center}
+.mbtn.wa{background:var(--ink);color:var(--bg)}
+.mbtn.ghost{border-color:var(--line);color:var(--muted);font-weight:500}
+.mbtn:disabled{opacity:.45;cursor:default}
+
+.bars{background:var(--surface);border:1.5px solid var(--ink);border-radius:4px;padding:16px;display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:minmax(120px,200px) 1fr 48px;gap:12px;align-items:center;font-size:13px}
+.bar .name{font-weight:600;overflow-wrap:anywhere}
+.bar .track2{height:14px;background:var(--chip);border-radius:2px;overflow:hidden}
+.bar .fill{display:block;height:100%;background:var(--accent)}
+.bar .n2{font:500 13px var(--mono);text-align:right}
+.bar .sizes{grid-column:2/4;font:12px var(--mono);color:var(--muted);margin-top:-6px}
+@media (max-width:480px){.bar{grid-template-columns:1fr 40px}.bar .track2{grid-column:1/3;grid-row:2}.bar .sizes{grid-column:1/3;margin-top:0}}
+
+.empty{background:var(--surface);border:1.5px dashed var(--line);border-radius:6px;padding:28px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-family:var(--display);font-stretch:85%;font-size:20px;text-transform:uppercase;margin-bottom:4px}
+.foot{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;display:grid;gap:4px}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:4px;font-size:13px;max-width:calc(100% - 32px);z-index:5}
+
+/* Login screen */
+.login{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;padding:16px;z-index:10;overflow:auto}
+.login-card{width:min(400px,100%);background:var(--surface);border:1.5px solid var(--ink);border-radius:6px;padding:24px;display:grid;gap:14px}
+.login-card h1{font-size:44px}
+.login-card .field{display:grid;gap:6px}
+.login-card .field span{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.in.big{height:42px;font-size:15px;width:100%}
+.login-card .btn{justify-content:center;height:44px}
+.login-card .err{margin:0;color:var(--bad);font-size:13px}
+.updated .linkbtn{font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="login" id="login" hidden>
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <div class="eyebrow">Valantis · Influencer seeding</div>
+    <h1>Collab <span>Tracker</span></h1>
+    <p class="sub">Team access only. Your name is shown next to every change you make.</p>
+    <label class="field"><span>Your name</span><input class="in big" id="loginName" name="name" autocomplete="name" required maxlength="60"></label>
+    <label class="field"><span>Team password</span><input class="in big" id="loginPw" name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary" id="loginBtn" type="submit">Log in</button>
+    <p class="err" id="loginErr" hidden></p>
+  </form>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="eyebrow">Valantis · Influencer seeding</div>
+      <h1>Collab <span>Tracker</span></h1>
+    </div>
+    <div class="controls">
+      <div class="periods" id="periods" role="group" aria-label="Period">
+        <button type="button" data-p="30" aria-pressed="false">30 days</button>
+        <button type="button" data-p="60" aria-pressed="true">60 days</button>
+        <button type="button" data-p="month" aria-pressed="false">This month</button>
+        <button type="button" data-p="lastmonth" aria-pressed="false">Last month</button>
+        <button type="button" data-p="life" aria-pressed="false">Lifetime</button>
+      </div>
+      <button class="btn primary" id="refresh" type="button">Refresh</button>
+      <button class="btn" id="export" type="button">Export CSV</button>
+      <div class="updated"><span id="updated">Not loaded yet</span> · <span id="who"></span> · <button type="button" class="linkbtn" id="logout">Log out</button></div>
+    </div>
+  </header>
+
+  <div id="banner" class="banner info">
+    <b>Loading…</b>
+    <span>Reading collab orders and discount-code sales from Shopify.</span>
+  </div>
+
+  <section class="kpis" aria-label="Summary">
+    <div class="kpi"><span class="n" id="k-inf">–</span><span class="l">Influencers</span><span class="s" id="k-inf-s"></span></div>
+    <div class="kpi"><span class="n" id="k-ship">–</span><span class="l">Shipments</span><span class="s" id="k-ship-s"></span></div>
+    <div class="kpi"><span class="n" id="k-val">–</span><span class="l">Product value sent</span><span class="s" id="k-val-s"></span></div>
+    <div class="kpi"><span class="n" id="k-sales">–</span><span class="l">Sales via codes</span><span class="s" id="k-sales-s"></span></div>
+    <div class="kpi"><span class="n" id="k-pay">–</span><span class="l">Commission owed</span><span class="s" id="k-pay-s"></span></div>
+    <div class="kpi" id="k-due-box"><span class="n" id="k-due">–</span><span class="l">Reminders due</span><span class="s">across all shipments</span></div>
+  </section>
+
+  <details class="settings" id="settingsBox">
+    <summary>Reminder settings</summary>
+    <div class="settings-body">
+      <div class="field">
+        <label for="r1Days">Reminder 1</label>
+        <div class="days"><input class="in pct" id="r1Days" type="number" min="0" max="60" step="1"> days after delivery</div>
+        <label for="r1Msg">Reminder 1 message</label>
+        <textarea id="r1Msg"></textarea>
+      </div>
+      <div class="field">
+        <label for="r2Days">Reminder 2</label>
+        <div class="days"><input class="in pct" id="r2Days" type="number" min="0" max="90" step="1"> days after delivery</div>
+        <label for="r2Msg">Reminder 2 message</label>
+        <textarea id="r2Msg"></textarea>
+      </div>
+      <div class="field">
+        <label for="stopDays">Stop reminding</label>
+        <div class="days"><input class="in pct" id="stopDays" type="number" min="7" max="365" step="1"> days after delivery</div>
+        <span class="hint">Older shipments with no content are marked “Too old to chase” so old seedings don’t flood the reminder list.</span>
+      </div>
+      <div class="field">
+        <label>Placeholders</label>
+        <span class="hint"><code>{name}</code> influencer’s first name · <code>{articles}</code> what that shipment had · <code>{code}</code> their discount code</span>
+        <span class="hint">Reminders run per shipment, counted from that parcel’s delivery. “WhatsApp” opens the chat with the message filled in; press “Mark sent” after sending. Nothing is sent automatically.</span>
+        <span class="saved" id="settingsSaved"></span>
+      </div>
+    </div>
+  </details>
+
+  <div class="toolbar">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-view="inf">Influencers</button>
+      <button role="tab" aria-selected="false" data-view="ship">Shipments</button>
+      <button role="tab" aria-selected="false" data-view="art">Articles</button>
+    </div>
+    <div class="filters">
+      <div class="focus" id="focus" hidden></div>
+      <div class="seg" id="seg">
+        <button type="button" aria-pressed="true" data-f="all">All</button>
+        <button type="button" aria-pressed="false" data-f="due">Reminder due</button>
+        <button type="button" aria-pressed="false" data-f="pending">Content pending</button>
+        <button type="button" aria-pressed="false" data-f="posted">Posted</button>
+        <button type="button" aria-pressed="false" data-f="nocode">No code yet</button>
+      </div>
+      <input class="search" id="q" type="search" placeholder="Search name, city, code, order, article">
+    </div>
+  </div>
+
+  <main id="view">
+    <div class="empty"><b>Influencer rows appear here</b>Every collab order from Shopify becomes a shipment, grouped under its influencer. Add each influencer’s discount code and commission %, and track content shipment by shipment.</div>
+  </main>
+
+  <datalist id="codeList"></datalist>
+
+  <div class="foot">
+    <span><b>Period</b> applies to everything: shipments created in it, code sales made in it, and the value of product sent in it. An influencer shows up if they were sent something in the period or their code sold in it. <b>Lifetime</b> reads every collab order since the store opened.</span>
+    <span><b>Sales</b> are Shopify net sales (after discounts and returns, before shipping and tax) on orders using the code. <b>Payout</b> = net sales × commission %. <b>Return</b> = net sales ÷ retail value of product sent.</span>
+    <span><b>Collab orders</b> have “collab” in the customer or ship-to name, or a <code>collab</code> / <code>influencer-collab</code> tag. Shipments are grouped into influencers by phone number. Addresses and phone numbers are read live from Shopify and never stored by this app. Teammates’ edits appear on everyone’s screen within about 15 seconds; every edit is logged with the name used at login.</span>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  "use strict";
+  // Valantis Collab Tracker — browser side.
+  // Talks only to this app's own server (/api/*). The server holds the Shopify and database keys.
+  const COLLAB_TAGS = ["collab", "influencer-collab"];
+  const LIFETIME_SINCE = "2024-01-01";
+  const POLL_MS = 15 * 1000;                 // pick up teammates' edits
+  const AUTO_REFRESH_MS = 10 * 60 * 1000;    // re-read recent Shopify orders
+  const DEFAULTS = {
+    r1Days: 3, r2Days: 7, stopDays: 30,
+    r1Msg: "Hi {name}! Hope you’re loving the Valantis pieces we sent ({articles}). Whenever you’re ready, we’d love to see your content. Don’t forget to share your code {code} so your audience gets the discount. Thank you!",
+    r2Msg: "Hi {name}, just following up on the Valantis collab. Could you let us know when your post with {articles} is going live? Your code {code} is active for your followers. Thanks!",
+  };
+
+  const S = {
+    me: null, canWrite: true,
+    orders: new Map(), coverage: null,          // coverage: earliest IST day loaded, or "life"
+    inf: new Map(), infStored: new Set(), infReady: false,
+    ship: new Map(), shipStored: new Set(),
+    settings: { ...DEFAULTS }, lastPull: "",
+    sales: new Map(), salesKey: "", allCodes: [],
+    period: "60", view: "inf", filter: "all", q: "", focus: null,
+    loading: false, loadedAt: null, dirty: false,
+  };
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- helpers ----------
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const hasCollab = (n) => /\bcollab\b/i.test(n || "");
+  const cleanName = (n) => (n || "").replace(/\bcollab\b/ig, "").replace(/\s+\.?\s*$/, "").replace(/\s{2,}/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase()) || "Unnamed";
+  const titleCase = (s) => (s || "").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  const digits = (p) => (p || "").replace(/\D/g, "");
+  const inr = (n) => n == null ? "—" : "₹" + Math.round(n).toLocaleString("en-IN");
+  const inrK = (n) => n == null ? "—" : Math.abs(n) >= 100000 ? "₹" + (n / 100000).toFixed(n >= 1e6 ? 1 : 2) + "L" : inr(n);
+  // Stable short hash, so stored ids are not raw phone numbers.
+  function cyrb53(str, seed = 0) {
+    let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+    for (let i = 0; i < str.length; i++) { const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+  }
+  const keyFor = (o) => { const p = digits(o.shippingAddress?.phone).slice(-10); return "inf_" + cyrb53(p || cleanName(o.customer?.displayName || o.shippingAddress?.name).toLowerCase()); };
+  const shipId = (o) => "o_" + String(o.id).split("/").pop();
+
+  const IST = 330 * 60000;
+  const istDay = (d) => new Date(new Date(d).getTime() + IST).toISOString().slice(0, 10);
+  const today = () => istDay(Date.now());
+  const addDays = (ymd, n) => { const d = new Date(ymd + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const istStartISO = (ymd) => new Date(new Date(ymd + "T00:00:00Z").getTime() - IST).toISOString().replace(".000", "");
+  const fmtDay = (ymd) => ymd ? new Date(ymd + "T00:00:00Z").toLocaleDateString("en-IN", { timeZone: "UTC", day: "numeric", month: "short" }) : "";
+  const fmtDayY = (ymd) => ymd ? new Date(ymd + "T00:00:00Z").toLocaleDateString("en-IN", { timeZone: "UTC", day: "numeric", month: "short", year: "2-digit" }) : "";
+
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3200); }
+  function banner(kind, title, body, progress) {
+    const b = $("banner");
+    if (!kind) { b.hidden = true; return; }
+    b.hidden = false; b.className = "banner " + kind;
+    b.innerHTML = `<b>${esc(title)}</b>${body ? `<span>${esc(body)}</span>` : ""}${progress ? '<div class="progress"><i></i></div>' : ""}`;
+  }
+
+  // ---------- periods ----------
+  function range(p = S.period) {
+    const t = today(), [y, m] = t.split("-").map(Number);
+    if (p === "30") return { since: addDays(t, -29), until: t, label: "last 30 days" };
+    if (p === "60") return { since: addDays(t, -59), until: t, label: "last 60 days" };
+    if (p === "month") return { since: t.slice(0, 8) + "01", until: t, label: "this month" };
+    if (p === "lastmonth") return { since: new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10), until: new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10), label: "last month" };
+    return { since: null, until: t, label: "lifetime" };
+  }
+  const inRange = (o, r = range()) => { const d = istDay(o.createdAt); return (!r.since || d >= r.since) && d <= r.until; };
+  // Everyday window: covers 60 days and all of last month.
+  function recentStart() { const a = range("60").since, b = range("lastmonth").since; return a < b ? a : b; }
+  const covered = (r) => S.coverage === "life" || (S.coverage && r.since && r.since >= S.coverage);
+
+
+  // ---------- talking to our server ----------
+  class ApiError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
+  async function api(path, payload) {
+    let r;
+    try {
+      r = await fetch(path, payload === undefined ? { credentials: "same-origin" } : {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" }, body: JSON.stringify(payload),
+      });
+    } catch { throw new ApiError(0, "offline", "Can’t reach the server. Check your internet connection."); }
+    let j = {}; try { j = await r.json(); } catch {}
+    if (r.status === 401 && path !== "/api/login") { showLogin("You’ve been logged out. Please log in again."); throw new ApiError(401, "login_required", "Please log in again."); }
+    if (!r.ok) throw new ApiError(r.status, j.error?.code || "error", j.error?.message || `Server error (${r.status}).`);
+    return j;
+  }
+  const shop = (op, params) => api("/api/shopify", { op, ...params });
+  async function retryOnce(fn) {
+    try { return await fn(); }
+    catch (e) { if (e.status >= 500 && e.code !== "shopify_scope") { await new Promise((r) => setTimeout(r, 1200 + Math.random() * 800)); return fn(); } throw e; }
+  }
+  function errorCopy(e) {
+    if (e.code === "offline") return ["You’re offline", e.message];
+    if (e.code === "shopify_auth") return ["Shopify connection isn’t set up", e.message];
+    if (e.code === "shopify_scope") return ["The Shopify app needs another permission", e.message];
+    if (e.code === "login_required") return ["Logged out", "Please log in again."];
+    return ["Couldn’t load from Shopify", e.message || "Press Refresh to try again."];
+  }
+
+  // Find collab orders from `since` (IST day, or null = lifetime) and load their details.
+  async function loadOrders(since) {
+    let after = null, pages = 0; const ids = [];
+    do {
+      banner("info", since ? "Finding collab orders…" : "Reading every collab order since the store opened…", `${ids.length} found so far`, true);
+      const r = await retryOnce(() => shop("scan", { since, after }));
+      ids.push(...r.ids); after = r.next; pages++;
+    } while (after && pages < 80);
+    for (let i = 0; i < ids.length; i += 25) {
+      banner("info", "Loading shipment details…", `${Math.min(i + 25, ids.length)} of ${ids.length}`, true);
+      const r = await retryOnce(() => shop("details", { ids: ids.slice(i, i + 25) }));
+      for (const o of r.orders) S.orders.set(o.id, o);
+    }
+    if (!since) S.coverage = "life"; else if (S.coverage !== "life" && (!S.coverage || since < S.coverage)) S.coverage = since;
+  }
+
+  async function loadSales() {
+    const r = range();
+    const out = await retryOnce(() => shop("sales", { since: r.since || LIFETIME_SINCE, until: r.until }));
+    const m = new Map(); for (const x of out.rows) m.set(x.code.toLowerCase(), x);
+    S.sales = m; S.salesKey = S.period + "|" + r.until;
+    if (S.period === "life") S.allCodes = out.rows.map((x) => x.code);
+  }
+  async function loadAllCodes() {
+    if (S.allCodes.length) return;
+    try { const out = await shop("sales", { since: LIFETIME_SINCE, until: today() }); S.allCodes = out.rows.map((x) => x.code); } catch { /* suggestions are optional */ }
+  }
+
+  async function sync({ full = false, recentOnly = false } = {}) {
+    if (S.loading || !S.me) return;
+    S.loading = true; setBusy(true);
+    try {
+      const r = range();
+      if (recentOnly) await loadOrders(recentStart());
+      else if (full) await loadOrders(S.coverage === "life" || !r.since ? null : (r.since < recentStart() ? r.since : recentStart()));
+      else if (!covered(r)) await loadOrders(!r.since ? null : (r.since < recentStart() ? r.since : recentStart()));
+      let salesErr = null;
+      banner("info", "Loading discount-code sales…", "", true);
+      try { await loadSales(); await loadAllCodes(); } catch (e) { salesErr = e; }
+      S.loadedAt = new Date();
+      if (salesErr) { const [t, b] = errorCopy(salesErr); banner("warn", "Sales by code didn’t load: " + t, b); } else banner(null);
+      await syncRoster();
+      render(true);
+    } catch (e) {
+      if (e.code !== "login_required") { const [t, b] = errorCopy(e); banner("err", t, b); }
+    } finally { S.loading = false; setBusy(false); }
+  }
+  function setBusy(b) { $("refresh").disabled = b; document.querySelectorAll("#periods button").forEach((x) => (x.disabled = b)); }
+
+  // ---------- saved data (db) ----------
+  function groups() {
+    const g = new Map();
+    for (const o of S.orders.values()) { const k = keyFor(o); if (!g.has(k)) g.set(k, []); g.get(k).push(o); }
+    for (const arr of g.values()) arr.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return g;
+  }
+  function infBase(id) {
+    const os = groups().get(id) || [], o = os[0];
+    return { name: o ? cleanName(o.customer?.displayName || o.shippingAddress?.name) : "Unnamed", city: o ? titleCase(o.shippingAddress?.city) : "",
+      orderIds: os.map((x) => x.id), firstSeeded: os.length ? os[os.length - 1].createdAt : new Date().toISOString(), code: "", pct: null };
+  }
+  function shipBase(id) {
+    const o = [...S.orders.values()].find((x) => shipId(x) === id);
+    return { order: o?.name || "", influencer: o ? keyFor(o) : "", content: "pending", contentLink: "", postedOn: "", deliveredOn: "", r1Sent: "", r2Sent: "" };
+  }
+
+  // ---------- saving + teammates' edits ----------
+  const queues = new Map();   // one save at a time per row, in order
+  function write(coll, id, patch) {
+    const kind = coll === "influencers" ? "influencer" : "shipment";
+    const stored = coll === "influencers" ? S.infStored : S.shipStored, cache = coll === "influencers" ? S.inf : S.ship, base = coll === "influencers" ? infBase : shipBase;
+    const run = async () => {
+      // A row the server hasn't seen yet goes up with its basic details so it is complete.
+      let send = patch;
+      if (!stored.has(id)) {
+        const b = base(id), keep = coll === "influencers" ? ["name", "city", "orderIds", "firstSeeded"] : ["order", "influencer"];
+        send = { ...Object.fromEntries(keep.filter((k) => b[k] !== undefined && b[k] !== "").map((k) => [k, b[k]])), ...patch };
+      }
+      try {
+        const r = await api("/api/save", { kind, id, patch: send });
+        stored.add(id); if (r.row) cache.set(id, { ...(cache.get(id) || {}), ...r.row });
+        return true;
+      } catch (e) {
+        if (e.code !== "login_required") toast(e.status === 400 ? e.message : "Couldn’t save that change. " + (e.message || "Try again."));
+        return false;
+      }
+    };
+    const k = coll + "/" + id, p = (queues.get(k) || Promise.resolve()).then(run, run);
+    queues.set(k, p); return p;
+  }
+
+  // Every influencer found in Shopify gets a saved row, so codes and commission stick to them.
+  async function syncRoster() {
+    if (!S.infReady) return;
+    for (const [id, os] of groups()) {
+      if (!S.infStored.has(id)) {
+        const b = infBase(id);
+        try { await api("/api/save", { kind: "influencer", id, createOnly: true, patch: { name: b.name, city: b.city, orderIds: b.orderIds, firstSeeded: b.firstSeeded } }); S.infStored.add(id); if (!S.inf.has(id)) S.inf.set(id, { ...b }); }
+        catch (e) { if (e.code === "login_required") return; }
+        continue;
+      }
+      const d = S.inf.get(id) || {}, merged = [...new Set([...(d.orderIds || []), ...os.map((o) => o.id)])];
+      if (merged.length !== (d.orderIds || []).length) await write("influencers", id, { orderIds: merged });
+    }
+  }
+
+  // Pull rows changed since the last pull (all rows the first time).
+  let pulling = false;
+  async function pull() {
+    if (pulling || !S.me) return;
+    pulling = true;
+    try {
+      const r = await api("/api/data" + (S.lastPull ? "?since=" + encodeURIComponent(S.lastPull) : ""));
+      for (const x of r.influencers) { S.inf.set(x.id, x); S.infStored.add(x.id); }
+      for (const x of r.shipments) { S.ship.set(x.id, x); S.shipStored.add(x.id); }
+      S.settings = { ...DEFAULTS, ...r.settings };
+      const first = !S.infReady;
+      S.lastPull = r.serverTime; S.infReady = true;
+      paintSettings();
+      if (first || r.influencers.length || r.shipments.length) render();
+      if (first && S.loadedAt) syncRoster();
+    } catch (e) {
+      if (e.code === "offline") $("updated").textContent = "Offline — changes from teammates will appear when you reconnect";
+    } finally { pulling = false; }
+  }
+
+  // ---------- shipment model ----------
+  function shipState(o) {
+    if (o.cancelledAt) return { key: "cancel", label: "Cancelled", cls: "bad" };
+    if ((o.tags || []).some((t) => /\brto\b/i.test(t))) return { key: "rto", label: (o.tags || []).some((t) => /rto delivered/i.test(t)) ? "Returned (RTO)" : "RTO / returning", cls: "bad" };
+    const live = (o.fulfillments || []).filter((f) => f.status === "SUCCESS"), ds = live.map((f) => f.displayStatus);
+    if (ds.includes("DELIVERED") || live.some((f) => f.deliveredAt)) return { key: "delivered", label: "Delivered", cls: "ok" };
+    if (ds.includes("OUT_FOR_DELIVERY")) return { key: "ship", label: "Out for delivery", cls: "ok" };
+    if (ds.includes("IN_TRANSIT") || live.some((f) => f.inTransitAt)) return { key: "ship", label: "In transit", cls: "ok" };
+    if (ds.some((d) => ["FAILED_DELIVERY", "ATTEMPTED_DELIVERY", "NOT_DELIVERED"].includes(d))) return { key: "issue", label: "Delivery issue", cls: "bad" };
+    if (o.displayFulfillmentStatus === "FULFILLED") return { key: "ship", label: "Shipped", cls: "ok" };
+    return { key: "wait", label: "Awaiting dispatch", cls: "wait" };
+  }
+  const tracking = (o) => { for (const f of o.fulfillments || []) if (f.status === "SUCCESS") for (const t of f.trackingInfo || []) if (t.number) return t; return null; };
+  const shopDelivered = (o) => { for (const f of o.fulfillments || []) if (f.status === "SUCCESS" && f.deliveredAt) return istDay(f.deliveredAt); return ""; };
+  const items = (o) => o.lineItems?.nodes || [];
+  const pieces = (o) => items(o).reduce((n, l) => n + (l.quantity || 1), 0);
+  const value = (o) => items(o).reduce((n, l) => n + (+l.originalUnitPriceSet?.shopMoney?.amount || 0) * (l.quantity || 1), 0);
+  const notTagged = (o) => (hasCollab(o.customer?.displayName) || hasCollab(o.shippingAddress?.name)) && !(o.tags || []).some((t) => COLLAB_TAGS.includes(t.toLowerCase()));
+
+  function reminders(sh) {
+    const st = S.settings, t = today();
+    if (sh.content === "posted" || sh.content === "skip") return { r1: { kind: "na" }, r2: { kind: "na" }, due: 0 };
+    if (sh.state.key === "rto" || sh.state.key === "cancel") return { r1: { kind: "na", why: sh.state.label }, r2: { kind: "na", why: sh.state.label }, due: 0 };
+    if (!sh.delivered) return { r1: { kind: "wait", why: "After delivery" }, r2: { kind: "wait", why: "After delivery" }, due: 0 };
+    const d = sh.doc, due1 = addDays(sh.delivered, +st.r1Days || 0);
+    if (addDays(sh.delivered, +st.stopDays || 30) < t && !(d.r1Sent && !d.r2Sent)) {
+      const old = { kind: "na", why: "Too old to chase" };
+      return { r1: d.r1Sent ? { kind: "sent", on: d.r1Sent } : old, r2: d.r2Sent ? { kind: "sent", on: d.r2Sent } : old, due: 0 };
+    }
+    const r1 = d.r1Sent ? { kind: "sent", on: d.r1Sent } : { kind: due1 <= t ? "due" : "later", on: due1 };
+    let r2;
+    if (d.r2Sent) r2 = { kind: "sent", on: d.r2Sent };
+    else if (!d.r1Sent) r2 = { kind: "wait", why: "After reminder 1" };
+    else { const due2 = [addDays(sh.delivered, +st.r2Days || 0), addDays(d.r1Sent, 1)].sort().pop(); r2 = { kind: due2 <= t ? "due" : "later", on: due2 }; }
+    return { r1, r2, due: (r1.kind === "due") + (r2.kind === "due") };
+  }
+
+  function shipment(o) {
+    const id = shipId(o), doc = S.ship.get(id) || {}, state = shipState(o), auto = shopDelivered(o);
+    const sh = { id, o, doc, state, infId: keyFor(o), auto, delivered: auto || doc.deliveredOn || "", content: doc.content || "pending" };
+    sh.rem = reminders(sh);
+    sh.open = sh.content === "pending" && sh.state.key !== "rto" && sh.state.key !== "cancel";
+    return sh;
+  }
+
+  // ---------- views ----------
+  function model() {
+    const r = range(), g = groups(), ids = new Set([...S.inf.keys(), ...g.keys()]);
+    const allShips = [...S.orders.values()].map(shipment);
+    const byInf = new Map(); for (const sh of allShips) { if (!byInf.has(sh.infId)) byInf.set(sh.infId, []); byInf.get(sh.infId).push(sh); }
+    const codeCount = new Map();
+    for (const id of ids) { const c = (S.inf.get(id)?.code || "").trim().toLowerCase(); if (c) codeCount.set(c, (codeCount.get(c) || 0) + 1); }
+    const infs = [];
+    for (const id of ids) {
+      const d = S.inf.get(id) || {}, all = (byInf.get(id) || []).sort((a, b) => b.o.createdAt.localeCompare(a.o.createdAt));
+      const inP = all.filter((sh) => inRange(sh.o, r)), latest = all[0]?.o;
+      const code = (d.code || "").trim(), sale = code ? S.sales.get(code.toLowerCase()) : null;
+      const net = code ? (sale ? sale.net : 0) : null, pct = typeof d.pct === "number" ? d.pct : null;
+      const show = !r.since || inP.length || (sale && (sale.orders || sale.net));
+      if (!show) continue;
+      const val = inP.reduce((s, sh) => s + value(sh.o), 0);
+      const flags = [];
+      if (all.some((sh) => notTagged(sh.o))) flags.push(`${all.filter((sh) => notTagged(sh.o)).length} order(s) not tagged “collab”`);
+      if (code && (codeCount.get(code.toLowerCase()) || 0) > 1) flags.push(`Code ${code} is also on another influencer`);
+      infs.push({ id, d, all, inP, latest, code, sale, net, pct, payout: net != null && pct != null ? net * pct / 100 : null, val,
+        name: d.name || (latest ? cleanName(latest.customer?.displayName || latest.shippingAddress?.name) : "Unnamed"),
+        city: (latest ? titleCase(latest.shippingAddress?.city) : "") || d.city || "", phone: latest?.shippingAddress?.phone || "",
+        lifetimeCount: Math.max(all.length, (d.orderIds || []).length),
+        posted: inP.filter((s) => s.content === "posted").length, open: inP.filter((s) => s.open).length,
+        due: all.reduce((s, sh) => s + sh.rem.due, 0), flags });
+    }
+    infs.sort((a, b) => (b.all[0]?.o.createdAt || "").localeCompare(a.all[0]?.o.createdAt || ""));
+    const infById = new Map(infs.map((x) => [x.id, x]));
+    const ships = allShips.filter((sh) => inRange(sh.o, r)).sort((a, b) => b.o.createdAt.localeCompare(a.o.createdAt));
+    return { r, infs, ships, allShips, infById, byInf };
+  }
+
+  const matchQ = (parts) => { const q = S.q.trim().toLowerCase(); return !q || parts.join(" ").toLowerCase().includes(q); };
+  function filterInfs(list) {
+    return list.filter((x) => {
+      if (S.filter === "due" && !x.due) return false;
+      if (S.filter === "pending" && !x.open) return false;
+      if (S.filter === "posted" && !x.posted) return false;
+      if (S.filter === "nocode" && x.code) return false;
+      return matchQ([x.name, x.city, x.code, x.phone, ...x.all.map((s) => s.o.name), ...x.all.flatMap((s) => items(s.o).map((l) => l.title))]);
+    });
+  }
+  function filterShips(list, m) {
+    return list.filter((sh) => {
+      if (S.focus && sh.infId !== S.focus) return false;
+      if (S.filter === "due" && !sh.rem.due) return false;
+      if (S.filter === "pending" && !sh.open) return false;
+      if (S.filter === "posted" && sh.content !== "posted") return false;
+      const inf = S.inf.get(sh.infId) || {};
+      if (S.filter === "nocode" && (inf.code || "").trim()) return false;
+      const a = sh.o.shippingAddress || {};
+      return matchQ([sh.o.name, inf.name, cleanName(sh.o.customer?.displayName || a.name), a.city, a.phone, inf.code, ...items(sh.o).map((l) => l.title)]);
+    });
+  }
+
+  const dis = () => (!S.me ? "disabled" : "");
+  const chips = (o) => `<div class="chips">${items(o).map((l) => `<span class="chip">${esc(l.title)}<em>${esc((l.variantTitle || "").split("/").pop().trim())}${l.quantity > 1 ? " ×" + l.quantity : ""}</em></span>`).join("")}</div>`;
+
+  function infHTML(m) {
+    const list = filterInfs(m.infs);
+    if (!list.length) return emptyHTML();
+    const sum = (f) => list.reduce((s, x) => s + (f(x) || 0), 0);
+    const totNet = sum((x) => x.net), totVal = sum((x) => x.val);
+    return `<div class="tablewrap"><table class="ledger sticky">
+      <thead>
+        <tr><th rowspan="2">Influencer</th><th class="grp" colspan="3">Seeding · ${esc(m.r.label)}</th><th class="grp" colspan="6">Code &amp; commission · ${esc(m.r.label)}</th></tr>
+        <tr><th>Shipments</th><th class="num">Product value</th><th>Content</th><th>Discount code</th><th class="num">Code orders</th><th class="num">Net sales</th><th class="num">Return</th><th class="num">Comm. %</th><th class="num">Payout</th></tr>
+      </thead><tbody>${list.map((x) => {
+        const ret = x.net != null && x.val > 0 ? x.net / x.val : null;
+        return `<tr>
+        <td><div class="who"><b>${esc(x.name)}</b><span class="sub">${esc(x.city)}${x.phone ? " · " + esc(x.phone) : ""}</span>
+          <span class="sub">${x.lifetimeCount} shipment${x.lifetimeCount === 1 ? "" : "s"} all-time${x.all.length ? " · first " + esc(fmtDayY(istDay(x.all[x.all.length - 1].o.createdAt))) : ""}</span>
+          ${x.flags.map((f) => `<span class="flag${/another/.test(f) ? " bad" : ""}">${esc(f)}</span>`).join("")}</div></td>
+        <td><div class="stack"><span><b>${x.inP.length}</b> in period${x.inP.length ? ` · last ${esc(fmtDay(istDay(x.inP[0].o.createdAt)))}` : ""}</span>
+          <span class="sub">${x.inP.reduce((s, sh) => s + pieces(sh.o), 0)} pieces</span>
+          ${x.all.length ? `<button class="linkbtn" data-act="focus" data-id="${x.id}">See shipments →</button>` : ""}</div></td>
+        <td class="num">${x.inP.length ? inr(x.val) : "—"}</td>
+        <td><div class="stack">${x.inP.length ? `<div class="tally">${x.posted ? `<span class="pill ok">${x.posted} posted</span>` : ""}${x.open ? `<span class="pill wait">${x.open} pending</span>` : ""}${!x.posted && !x.open ? '<span class="pill mute">Nothing open</span>' : ""}</div>` : '<span class="sub">No shipments in period</span>'}
+          ${x.due ? `<span class="pill wait">${x.due} reminder${x.due > 1 ? "s" : ""} due</span>` : ""}</div></td>
+        <td><div class="stack"><input class="in code" list="codeList" id="code-${x.id}" data-coll="influencers" data-f="code" data-id="${x.id}" value="${esc(x.code)}" placeholder="Add code" autocomplete="off" spellcheck="false" ${dis()}>
+          ${x.code && !x.sale ? `<span class="sub">No sales ${esc(m.r.label === "lifetime" ? "yet" : "in period")}</span>` : ""}</div></td>
+        <td class="num">${x.code ? (x.sale ? x.sale.orders : 0) : "—"}</td>
+        <td class="num">${x.code ? inr(x.net) : "—"}</td>
+        <td class="num">${ret != null ? ret.toFixed(1) + "×" : "—"}</td>
+        <td class="num"><input class="in pct" type="number" min="0" max="100" step="0.5" id="pct-${x.id}" data-coll="influencers" data-f="pct" data-id="${x.id}" value="${x.pct ?? ""}" placeholder="%" ${dis()}></td>
+        <td class="num"><b>${x.payout != null ? inr(x.payout) : "—"}</b></td></tr>`; }).join("")}
+      </tbody><tfoot><tr><td>Total · ${list.length} influencers</td><td>${sum((x) => x.inP.length)} shipments</td><td class="num">${inr(totVal)}</td><td>${sum((x) => x.posted)} posted · ${sum((x) => x.open)} pending</td><td></td>
+        <td class="num">${sum((x) => x.sale?.orders)}</td><td class="num">${inr(totNet)}</td><td class="num">${totVal > 0 ? (totNet / totVal).toFixed(1) + "×" : "—"}</td><td></td><td class="num">${inr(sum((x) => x.payout))}</td></tr></tfoot>
+    </table></div>`;
+  }
+
+  function remCell(sh, n, inf) {
+    const x = n === 1 ? sh.rem.r1 : sh.rem.r2, field = n === 1 ? "r1Sent" : "r2Sent";
+    if (x.kind === "na") return `<span class="sub">${esc(x.why || "Not needed")}</span>`;
+    if (x.kind === "wait") return `<span class="sub">${esc(x.why)}</span>`;
+    if (x.kind === "sent") return `<div class="rem"><span class="pill ok">Sent ${esc(fmtDay(x.on))}</span><button class="mbtn ghost" data-act="unsend" data-f="${field}" data-id="${sh.id}" ${dis()}>Undo</button></div>`;
+    const wa = waLink(sh, n, inf);
+    return `<div class="rem"><span class="pill ${x.kind === "due" ? "wait" : "mute"}">${x.kind === "due" ? "Due " + (x.on === today() ? "today" : "since " + fmtDay(x.on)) : "Due " + fmtDay(x.on)}</span>
+      <div class="mini">${wa ? `<a class="mbtn wa" href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}<button class="mbtn" data-act="send" data-f="${field}" data-id="${sh.id}" ${dis()}>Mark sent</button></div></div>`;
+  }
+  function waLink(sh, n, inf) {
+    let p = digits(sh.o.shippingAddress?.phone); if (!p) return "";
+    if (p.length === 10) p = "91" + p;
+    const name = (inf?.name || cleanName(sh.o.customer?.displayName || sh.o.shippingAddress?.name)).split(" ")[0];
+    const arts = [...new Set(items(sh.o).map((l) => titleCase(l.title)))].join(", ") || "the pieces";
+    const msg = ((n === 1 ? S.settings.r1Msg : S.settings.r2Msg) || "").replace(/\{name\}/g, name).replace(/\{articles\}/g, arts).replace(/\{code\}/g, (inf?.code || "").trim() || "your discount code");
+    return `https://wa.me/${p}?text=${encodeURIComponent(msg)}`;
+  }
+
+  function shipsHTML(m) {
+    const list = filterShips(m.ships, m);
+    if (!list.length) return emptyHTML();
+    return `<div class="tablewrap"><table class="ships sticky"><thead>
+      <tr><th rowspan="2">Shipment</th><th rowspan="2">Influencer</th><th class="grp" colspan="2">What we sent</th><th class="grp" colspan="4">Deliverable for this shipment</th></tr>
+      <tr><th>Articles</th><th>Status</th><th>Delivered on</th><th>Content</th><th>Reminder 1</th><th>Reminder 2</th></tr></thead><tbody>${
+      list.map((sh) => { const o = sh.o, a = o.shippingAddress || {}, t = tracking(o), inf = S.inf.get(sh.infId) || {}, name = inf.name || cleanName(o.customer?.displayName || a.name);
+        const addr = [[a.address1, a.address2].filter((x) => x && x.trim()).join(", "), titleCase(a.city), a.province, a.zip].filter(Boolean).join(", ");
+        const nth = (m.byInf.get(sh.infId) || []).slice().sort((x, y) => x.o.createdAt.localeCompare(y.o.createdAt)).findIndex((x) => x.id === sh.id) + 1;
+        return `<tr>
+        <td><div class="stack"><span class="ordno">${esc(o.name)}</span><span class="sub">${esc(fmtDayY(istDay(o.createdAt)))}</span>${nth > 1 ? `<span class="pill mute">Seeding #${nth}</span>` : ""}${notTagged(o) ? '<span class="flag">Not tagged “collab”</span>' : ""}</div></td>
+        <td><div class="who"><b>${esc(name)}</b><span class="sub">${esc(a.phone || "")}${inf.code ? " · code " + esc(inf.code) : ""}</span><span class="addr">${esc(addr)}</span></div></td>
+        <td><div class="stack">${chips(o)}<span class="sub">${pieces(o)} pcs · ${inr(value(o))} retail</span></div></td>
+        <td><div class="stack"><span class="pill ${sh.state.cls}">${esc(sh.state.label)}</span>${t ? `<span class="track">${esc(t.company || "")}${t.url ? ` <a class="link" href="${esc(t.url)}" target="_blank" rel="noopener">Track ↗</a>` : ""}</span>` : ""}</div></td>
+        <td><div class="stack">${sh.auto ? `<span>${esc(fmtDay(sh.auto))}</span><span class="sub">From Shopify</span>` :
+          `<input class="in date" type="date" id="del-${sh.id}" data-coll="shipments" data-f="deliveredOn" data-id="${sh.id}" value="${esc(sh.doc.deliveredOn || "")}" max="${today()}" ${dis()}><span class="sub">${sh.doc.deliveredOn ? "Entered by you" : "Enter when delivered"}</span>`}</div></td>
+        <td><div class="stack"><select class="in" id="ct-${sh.id}" data-coll="shipments" data-f="content" data-id="${sh.id}" ${dis()}>
+            <option value="pending" ${sh.content === "pending" ? "selected" : ""}>Pending</option>
+            <option value="posted" ${sh.content === "posted" ? "selected" : ""}>Posted</option>
+            <option value="skip" ${sh.content === "skip" ? "selected" : ""}>Won’t post</option></select>
+          <input class="in link" type="url" id="cl-${sh.id}" data-coll="shipments" data-f="contentLink" data-id="${sh.id}" value="${esc(sh.doc.contentLink || "")}" placeholder="Post link" ${dis()}>
+          ${sh.doc.contentLink ? `<a class="link" href="${esc(sh.doc.contentLink)}" target="_blank" rel="noopener">Open post ↗</a>` : ""}${sh.doc.postedOn && sh.content === "posted" ? `<span class="sub">Marked ${esc(fmtDay(sh.doc.postedOn))}</span>` : ""}</div></td>
+        <td>${remCell(sh, 1, inf)}</td><td>${remCell(sh, 2, inf)}</td></tr>`; }).join("")
+    }</tbody></table></div>`;
+  }
+
+  function articlesHTML(m) {
+    const mm = new Map(), order = ["XS", "S", "M", "L", "XL", "XXL"], rank = (x) => (order.includes(x) ? order.indexOf(x) : 99);
+    for (const sh of filterShips(m.ships, m)) for (const l of items(sh.o)) {
+      const x = mm.get(l.title) || { title: l.title, n: 0, val: 0, sizes: {} }, q = l.quantity || 1, sz = (l.variantTitle || "—").split("/").pop().trim();
+      x.n += q; x.val += (+l.originalUnitPriceSet?.shopMoney?.amount || 0) * q; x.sizes[sz] = (x.sizes[sz] || 0) + q; mm.set(l.title, x);
+    }
+    const rs = [...mm.values()].sort((a, b) => b.n - a.n);
+    if (!rs.length) return emptyHTML();
+    const max = rs[0].n;
+    return `<div class="bars">${rs.map((r) => `<div class="bar"><span class="name">${esc(r.title)}</span><span class="track2"><span class="fill" style="width:${(r.n / max * 100).toFixed(1)}%"></span></span><span class="n2">${r.n}</span>
+      <span class="sizes">${Object.entries(r.sizes).sort((a, b) => rank(a[0]) - rank(b[0])).map(([s, n]) => `${esc(s)} ${n}`).join(" · ")} · ${inr(r.val)} retail</span></div>`).join("")}</div>`;
+  }
+
+  function emptyHTML() {
+    if (!S.loadedAt && !S.inf.size) return `<div class="empty"><b>Influencer rows appear here</b>Every collab order from Shopify becomes a shipment once the page connects.</div>`;
+    return `<div class="empty"><b>Nothing matches</b>Clear the search or filter, or pick a longer period such as Lifetime.</div>`;
+  }
+
+  // Re-rendering while someone is typing would wipe their input, so wait until they leave the field.
+  function render(force) {
+    const ae = document.activeElement;
+    if (!force && ae && $("view").contains(ae) && /INPUT|SELECT|TEXTAREA/.test(ae.tagName)) { S.dirty = true; return; }
+    S.dirty = false;
+    const m = model(), lbl = m.r.label;
+    $("k-inf").textContent = m.infs.length; $("k-inf-s").textContent = lbl;
+    $("k-ship").textContent = m.ships.length;
+    const posted = m.ships.filter((s) => s.content === "posted").length, open = m.ships.filter((s) => s.open).length;
+    $("k-ship-s").textContent = `${posted} posted · ${open} pending`;
+    $("k-val").textContent = inrK(m.ships.reduce((s, sh) => s + value(sh.o), 0)); $("k-val-s").textContent = `${m.ships.reduce((s, sh) => s + pieces(sh.o), 0)} pieces at retail`;
+    const coded = m.infs.filter((x) => x.code), net = coded.reduce((s, x) => s + (x.net || 0), 0);
+    $("k-sales").textContent = coded.length ? inrK(net) : "—"; $("k-sales-s").textContent = `${coded.length} codes · ${lbl}`;
+    $("k-pay").textContent = coded.some((x) => x.payout != null) ? inrK(coded.reduce((s, x) => s + (x.payout || 0), 0)) : "—"; $("k-pay-s").textContent = lbl;
+    const due = m.allShips.reduce((s, sh) => s + sh.rem.due, 0);
+    $("k-due").textContent = due; $("k-due-box").classList.toggle("alert", due > 0);
+    $("codeList").innerHTML = S.allCodes.map((c) => `<option value="${esc(c)}"></option>`).join("");
+    const f = $("focus");
+    if (S.focus && S.view === "ship") { const inf = S.inf.get(S.focus) || m.infById.get(S.focus) || {}; f.hidden = false; f.innerHTML = `Showing shipments for <b>${esc(inf.name || "this influencer")}</b> <button type="button" data-act="unfocus">Show all</button>`; }
+    else f.hidden = true;
+    const html = S.view === "inf" ? infHTML(m) : S.view === "ship" ? shipsHTML(m) : articlesHTML(m);
+    const sx = $("view").querySelector(".tablewrap")?.scrollLeft || 0;
+    $("view").innerHTML = html;
+    const tw = $("view").querySelector(".tablewrap"); if (tw) tw.scrollLeft = sx;
+    if (S.loadedAt) $("updated").textContent = `Shopify read at ${S.loadedAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" })} IST · ${S.coverage === "life" ? "lifetime loaded" : "since " + fmtDayY(S.coverage)}`;
+  }
+
+  // ---------- editing ----------
+  $("view").addEventListener("change", async (e) => {
+    const el = e.target, id = el.dataset.id, f = el.dataset.f, coll = el.dataset.coll; if (!id || !f || !coll) return;
+    let v = el.value;
+    if (f === "pct") { if (v === "") v = null; else { v = Math.max(0, Math.min(100, +v)); if (!isFinite(v)) return; } }
+    if (f === "code") v = v.trim();
+    if (f === "contentLink" && v && !/^https?:\/\//i.test(v)) v = "https://" + v.trim();
+    const patch = { [f]: v };
+    if (f === "content" && v === "posted") patch.postedOn = today();
+    const cache = coll === "influencers" ? S.inf : S.ship, base = coll === "influencers" ? infBase : shipBase;
+    const prev = cache.get(id); cache.set(id, { ...(prev || base(id)), ...patch });
+    const ok = await write(coll, id, patch);
+    if (!ok) { if (prev) cache.set(id, prev); else cache.delete(id); }
+    render();
+  });
+  $("view").addEventListener("focusout", () => setTimeout(() => { if (S.dirty) render(); }, 0));
+  $("view").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("input.in")) e.target.blur(); });
+  $("view").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-act]"); if (!b || b.disabled) return;
+    if (b.dataset.act === "focus") { S.focus = b.dataset.id; setView("ship"); return; }
+    const id = b.dataset.id, f = b.dataset.f, v = b.dataset.act === "send" ? today() : "";
+    const prev = S.ship.get(id); S.ship.set(id, { ...(prev || shipBase(id)), [f]: v }); render(true);
+    if (await write("shipments", id, { [f]: v })) toast(v ? "Marked as sent" : "Reminder reset");
+    else { if (prev) S.ship.set(id, prev); else S.ship.delete(id); render(true); }
+  });
+  $("focus").addEventListener("click", (e) => { if (e.target.closest("[data-act=unfocus]")) { S.focus = null; render(true); } });
+
+
+  // Settings
+  const SK = ["r1Days", "r2Days", "stopDays", "r1Msg", "r2Msg"];
+  function paintSettings() { const ae = document.activeElement; for (const k of SK) { if ($(k) !== ae) $(k).value = S.settings[k] ?? DEFAULTS[k]; $(k).disabled = !S.me; } }
+  let settingsQ = Promise.resolve();
+  for (const k of SK) $(k).addEventListener("change", () => {
+    let v = $(k).value; if (/Days$/.test(k)) v = Math.max(0, Math.round(+v || 0));
+    S.settings = { ...S.settings, [k]: v }; render(true);
+    settingsQ = settingsQ.then(async () => {
+      try { const r = await api("/api/save", { kind: "settings", patch: { [k]: v } }); S.settings = { ...DEFAULTS, ...r.settings }; $("settingsSaved").textContent = "Saved"; setTimeout(() => ($("settingsSaved").textContent = ""), 2000); }
+      catch (e) { if (e.code !== "login_required") toast(e.status === 400 ? e.message : "Couldn’t save reminder settings."); }
+    });
+  });
+
+  // Toolbar
+  function setView(v) { S.view = v; document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.view === v))); render(true); }
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => { if (b.dataset.view !== "ship") S.focus = null; setView(b.dataset.view); }));
+  document.querySelectorAll("#seg button").forEach((b) => b.addEventListener("click", () => {
+    S.filter = b.dataset.f; document.querySelectorAll("#seg button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); render(true);
+  }));
+  $("q").addEventListener("input", (e) => { S.q = e.target.value; render(true); });
+  $("refresh").addEventListener("click", () => sync({ full: true }));
+  document.querySelectorAll("#periods button").forEach((b) => b.addEventListener("click", () => {
+    if (S.loading) return;
+    S.period = b.dataset.p; document.querySelectorAll("#periods button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    render(true); sync();
+  }));
+
+
+  // Export the table that's on screen as a CSV file
+  $("export").addEventListener("click", () => {
+    const m = model(), q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`, lbl = m.r.label;
+    let head, rows;
+    if (S.view === "inf") {
+      head = ["Influencer", "City", "Phone", `Shipments (${lbl})`, "Shipments all-time", `Product value (${lbl})`, "Posted", "Pending", "Discount code", `Code orders (${lbl})`, `Net sales (${lbl})`, "Return (x)", "Commission %", "Payout"];
+      rows = filterInfs(m.infs).map((x) => [x.name, x.city, x.phone, x.inP.length, x.lifetimeCount, Math.round(x.val), x.posted, x.open, x.code, x.code ? (x.sale?.orders || 0) : "", x.net != null ? Math.round(x.net) : "", x.net != null && x.val > 0 ? (x.net / x.val).toFixed(2) : "", x.pct ?? "", x.payout != null ? Math.round(x.payout) : ""]);
+    } else {
+      head = ["Order", "Date", "Influencer", "Phone", "City", "Articles", "Pieces", "Retail value", "Status", "Courier", "Tracking link", "Delivered on", "Content", "Post link", "Reminder 1 sent", "Reminder 2 sent"];
+      rows = filterShips(m.ships, m).map((sh) => { const o = sh.o, a = o.shippingAddress || {}, t = tracking(o), inf = S.inf.get(sh.infId) || {};
+        return [o.name, istDay(o.createdAt), inf.name || cleanName(o.customer?.displayName || a.name), a.phone, titleCase(a.city), items(o).map((l) => `${l.title} (${(l.variantTitle || "").split("/").pop().trim()})`).join("; "), pieces(o), Math.round(value(o)), sh.state.label, t?.company, t?.url, sh.delivered, { pending: "Pending", posted: "Posted", skip: "Won't post" }[sh.content], sh.doc.contentLink || "", sh.doc.r1Sent || "", sh.doc.r2Sent || ""]; });
+    }
+    const csv = "﻿" + [head.map(q).join(",")].concat(rows.map((r) => r.map(q).join(","))).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `valantis-${S.view === "inf" ? "influencers" : "shipments"}-${S.period}-${today()}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // ---------- login ----------
+  function showLogin(msg) {
+    S.me = null; $("login").hidden = false;
+    const err = $("loginErr"); err.hidden = !msg; err.textContent = msg || "";
+    try { const n = localStorage.getItem("vct_name"); if (n && !$("loginName").value) $("loginName").value = n; } catch {}
+    setTimeout(() => ($("loginName").value ? $("loginPw") : $("loginName")).focus(), 0);
+  }
+  $("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("loginBtn"); btn.disabled = true; $("loginErr").hidden = true;
+    try {
+      const r = await api("/api/login", { name: $("loginName").value, password: $("loginPw").value });
+      try { localStorage.setItem("vct_name", r.name); } catch {}
+      $("loginPw").value = "";
+      start(r.name);
+    } catch (err) { $("loginErr").hidden = false; $("loginErr").textContent = err.message; }
+    finally { btn.disabled = false; }
+  });
+  $("logout").addEventListener("click", async () => { try { await api("/api/logout", {}); } catch {} location.reload(); });
+
+  // ---------- boot ----------
+  let timers = [];
+  function start(name) {
+    S.me = name; $("login").hidden = true; $("who").textContent = name;
+    paintSettings(); render(true);
+    pull().then(() => sync());
+    timers.forEach(clearInterval);
+    timers = [
+      setInterval(() => { if (document.visibilityState === "visible") pull(); }, POLL_MS),
+      setInterval(() => { if (document.visibilityState === "visible") sync({ recentOnly: true }); }, AUTO_REFRESH_MS),
+    ];
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pull(); });
+  (async () => {
+    paintSettings();
+    try { const me = await api("/api/me"); start(me.name); }
+    catch (e) { if (e.code !== "login_required") showLogin(e.code === "offline" ? e.message : ""); }
+  })();
+})();
+</script>
+</body>
+</html>
