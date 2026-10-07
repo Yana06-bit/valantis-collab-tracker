@@ -51,10 +51,10 @@ If Shopify asks you to apply for `read_all_orders`, apply. Until it's granted, t
 2. Open **SQL Editor → New query**, paste the whole of [`supabase/schema.sql`](supabase/schema.sql), and click **Run**.
 3. Open **Project Settings → API keys**. Copy the **Project URL** and the **secret** key (`service_role`, or `sb_secret_…` on newer projects). Never use the secret key in a browser.
 
-### 3. Vercel
-1. Upgrade the Vercel account that will own this app to **Pro** ($20/month). The free Hobby plan doesn't allow commercial use. Teammates don't need Vercel accounts.
-2. Click **Add New → Project** and import this GitHub repo. Framework preset: **Other**. Leave the build settings empty.
-3. Under **Environment Variables**, add (see `.env.example`):
+### 3. Vercel (free Hobby plan)
+1. Log in to **https://vercel.com** (Hobby plan is fine — this app uses 6 small functions and very little traffic).
+2. **Add New → Project →** import this GitHub repo. Framework preset: **Other**. Leave build settings empty.
+3. **Environment Variables** — add these (see `.env.example`):
 
    | Name | Value |
    |---|---|
@@ -66,12 +66,15 @@ If Shopify asks you to apply for `read_all_orders`, apply. Until it's granted, t
    | `SUPABASE_URL` | from step 2 |
    | `SUPABASE_SERVICE_ROLE_KEY` | from step 2 |
 
-4. Click **Deploy**. Open the URL, log in with your name and the team password, and press **Lifetime** once to load all past collabs.
-5. Share the URL and password with the influencer team on WhatsApp. Don't post them anywhere public.
+4. **Settings → Functions → Function Region:** pick **Mumbai (bom1)** so the app sits next to your Supabase database. (Optional, but makes it faster.)
+5. Click **Deploy**. Open the URL, log in with your name and the team password, and press **Lifetime** once to load all past collabs.
+6. Share the URL and password with the influencer team on WhatsApp. Don't post them anywhere public.
 
 ---
 
 ## Day-to-day
+
+- **Free-plan notes:** Supabase pauses a free project after 7 days with no activity. Opening the tracker counts as activity, so daily use keeps it awake. If it ever pauses, click **Restore** in Supabase. Vercel Hobby limits (bandwidth, function time) are far above what this app uses.
 
 - **Someone leaves the team:** change `TEAM_PASSWORD` in Vercel (Settings → Environment Variables), then **Redeploy**. Everyone is logged out, and you share the new password with the people who should still have access.
 - **See who changed what:** open Supabase **Table Editor → `edits`**.
